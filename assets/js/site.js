@@ -34,7 +34,10 @@ if (navToggle && navMenu) {
     panel.classList.add('is-visible');
     if (jump) jump.classList.add('is-visible');
 
-    fetch(`${endpoint}?mode=stats&key=bobi_admin&v=20260510a`, {
+    const statsKey = window.prompt('Administrator access key') || '';
+    if (!statsKey) return;
+    fetch(`${endpoint}?mode=stats&v=20260510a`, {
+      headers: {'X-Visit-Admin-Key': statsKey},
       cache: 'no-store',
       credentials: 'same-origin',
     }).then((response) => response.json()).then((data) => {

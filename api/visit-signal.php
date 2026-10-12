@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/security.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -26,8 +27,9 @@ if (is_file($counterFile)) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && (string)($_GET['mode'] ?? '') === 'stats') {
-  $key = (string)($_GET['key'] ?? '');
-  if (!hash_equals('bobi_admin', $key)) {
+  $key = (string)($_SERVER['HTTP_X_VISIT_ADMIN_KEY'] ?? '');
+  $adminKey = (string)(getenv('VISIT_ADMIN_KEY') ?: ($config['VISIT_ADMIN_KEY'] ?? ''));
+  if (!security_secret_matches($adminKey, $key)) {
     http_response_code(403);
     echo json_encode(['ok' => false, 'error' => 'forbidden']);
     exit;
@@ -93,9 +95,9 @@ if (!in_array($event, ['page_view', 'promo_shown'], true)) {
   $event = 'page_view';
 }
 $visitorId = preg_replace('/[^a-z0-9_-]/i', '', (string)($data['visitor_id'] ?? ''));
-$path = substr((string)($data['path'] ?? '/'), 0, 180);
+$path = substr((string)(parse_url((string)($data['path'] ?? '/'), PHP_URL_PATH) ?: '/'), 0, 180);
 $title = substr((string)($data['title'] ?? ''), 0, 120);
-$referrer = substr((string)($data['referrer'] ?? ''), 0, 180);
+$referrer = substr((string)(parse_url((string)($data['referrer'] ?? ''), PHP_URL_HOST) ?: ''), 0, 180);
 
 $ip = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
 $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
@@ -157,7 +159,7 @@ function bobi_send_telegram(array $config, string $message): void {
   curl_close($ch);
 }
 
-if ($isNewVisitorToday && $event === 'promo_shown') {
+if ($isNewVisitorToday && $event === 'promo_shown' && ($config['VISITOR_TELEGRAM_NOTIFICATIONS'] ?? false) === true) {
   $totalUnique = count($counter['days'][$day]['unique_visitors']);
   bobi_send_telegram(
     $config,
