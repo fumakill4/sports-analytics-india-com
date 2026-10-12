@@ -34,12 +34,15 @@ function cricket_fetch_api_payload(array $config): ?array {
   }
 
   $url = str_replace('{API_KEY}', rawurlencode($apiKey), $apiUrl);
+  if (!str_starts_with($url, 'https://')) return null;
   $ch = curl_init($url);
   curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_CONNECTTIMEOUT => 8,
     CURLOPT_TIMEOUT => 18,
     CURLOPT_FOLLOWLOCATION => true,
+    CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+    CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
     CURLOPT_HTTPHEADER => array_values(array_filter([
       'Accept: application/json',
       $apiKey !== '' ? 'Authorization: Bearer ' . $apiKey : '',
